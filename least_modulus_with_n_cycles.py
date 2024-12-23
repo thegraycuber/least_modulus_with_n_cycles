@@ -45,6 +45,7 @@ def get_prime_fact(m,prime):
 
 
 def least_with_n_cycles(prime,limit,include_even = True):
+    #use include_even True for A379423 and False for A379424
 
     smallest_k = [1]
 
