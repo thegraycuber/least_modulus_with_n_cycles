@@ -362,14 +362,14 @@ def infinite_knapsack_terms(item_list,file_name,direction = 1):
 
 # this will convert the shorthand to explicit results of A379423 and A379424
 # this assumes that the 'names' are meant to be multiplied, and will not work for the general application of infinite knapsack
-def relative_to_explicit(relative_results,output_path,upper_limit = -1):
+def relative_to_explicit(relative_results,output_path,upper_limit = -1,type = ''):
 
     if upper_limit == -1:
         upper_limit = len(relative_results)
 
     explicit = [1]
 
-    for r in range(1,upper_limit,1):
+    for r in range(1,upper_limit+1):
         explicit.append(explicit[relative_results[r][2]])
         c = 4
         div = False
@@ -382,13 +382,16 @@ def relative_to_explicit(relative_results,output_path,upper_limit = -1):
                 explicit[-1] = explicit[-1]*int(relative_results[r][c])
 
             c += 1
-    file_output([[x,explicit[x]] for x in range(len(explicit))],output_path)
+    file_output([[x,explicit[x]] for x in range(len(explicit))],output_path,type)
 
 
-def file_output(data_output, file_name):
+def file_output(data_output, file_name, type = ''):
     with open(file_name,'w',encoding='utf-8') as f:
         for line in data_output:
-           f.write(','.join([str(x) for x in line])+'\n')
+            if type == 'b':
+                f.write(' '.join([str(x) for x in line])+'\n')
+            else:
+                f.write(','.join([str(x) for x in line])+'\n')
 
 def file_input(file_name,type=""):
 
@@ -420,6 +423,7 @@ out_list = infinite_knapsack_terms(item_list,output_name,-1)
 file_output(out_list,output_name)
 #out_list = file_input('A379423_shorthand.csv','relative')
 relative_to_explicit(out_list,'A379423.csv',5000)
+relative_to_explicit(out_list,'b379423.csv',1000,'b')
 
 
 # A379424
@@ -430,6 +434,7 @@ out_list = infinite_knapsack_terms(item_list,output_name,-1)
 file_output(out_list,output_name)
 #out_list = file_input('A379424_shorthand.csv','relative')
 relative_to_explicit(out_list,'A379424.csv',1000)
+relative_to_explicit(out_list,'b379424.csv',500,'b')
 """
 
 #print(time.time()-start_time)
