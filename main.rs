@@ -4,15 +4,13 @@ https://oeis.org/A379423
 https://oeis.org/A379424
 
 The output has rows of this form:
-( p, cycles, cost, value )
+( p, cycles )
 where p is a prime power
 cycles is the maximum number of cycles in a representation of (Z/pZ)* (only odd cycles for A379424)
-cost is ln(p)/cycles
-and value is ln(p)
 
-The output should be order ascending by cost, and there should be some real number r such that
-every prime power with cost < r is in the output
-and every prime power with cost > r is not in the output
+There will be some real number r such that
+every prime power p with ln(p)/cycles < r is in the output
+and every prime power with ln(p)/cycles > r is not in the output
 */
 
 use std::{fs::File, u128};
@@ -130,49 +128,36 @@ fn indices_extend(indices: &mut Vec<Vec<usize>>, prime_values: &Vec<u128>, index
 
 fn generate_factor_list(primes: &Vec<bool>,only_odd: bool,file_path: &str){
 
-    /* the factor list has the following two rows for each prime:
-        ( prime, c, ln(prime)/c, ln(prime) )
-        ( prime, 1, ln(prime)/1, ln(prime) )
-        where c = the number of primes dividing (prime - 1)
+    /* the factor list has the following two rows for each odd prime:
+        ( prime, cycles )
+        ( prime, 1 )
+        where cycles = the number of primes dividing (prime - 1)
 
-        these will be called 
-        ( factor, cycles, cost, value )
-
-        the output should be sorted by cost and should be 'complete'
-        i.e. there should be some real number r such that any row with cost < r is included in the list
-        and any row with cost >= r is excluded from the list
-
-        we also include ( 8, 2, ln(8)/2, ln(8) ) because ~group theory~ but that can be predefined
+        we also include ( 8, 2, ) because ~group theory~ 
         predefine 8 and the fermat primes, the only with 1 cycle, since prime - 1 must be even
     */
-    let mut factors: Vec<(u128,usize,f64,f64)>;
+    let mut factors: Vec<(u128,usize)>;
     let odd: usize;
     if !only_odd {
         factors = vec![
-            (8,2,0.0,0.0),
-            (3,1,0.0,0.0),
-            (5,1,0.0,0.0),
-            (17,1,0.0,0.0),
-            (257,1,0.0,0.0),
-            (65537,1,0.0,0.0)
+            (8,2),
+            (3,1),
+            (5,1),
+            (17,1),
+            (257,1),
+            (65537,1)
         ];
         odd = 0;
     } else {
         factors = vec![
-            (9,1,0.0,0.0),
-            (25,1,0.0,0.0),
-            (289,1,0.0,0.0),
-            (66049,1,0.0,0.0),
-            (4295098369,1,0.0,0.0)
+            (9,1),
+            (25,1),
+            (289,1),
+            (66049,1),
+            (4295098369,1)
         ];
         odd = 1;
     }
-
-    for f in &mut factors{
-        f.3 = (f.0 as f64).ln();
-        f.2 = f.3/(f.1 as f64);
-    }
-
 
     // primes is a list of true false, so we can use it check big primes up to (primes.len()-1)^2
     let big_prime_limit: u128 = (primes.len() as u128 -1)*(primes.len() as u128 -1);
@@ -204,22 +189,23 @@ fn generate_factor_list(primes: &Vec<bool>,only_odd: bool,file_path: &str){
         this also gives an upper bound for the max_cost
 
         take the minimum of these two values.   */
-    let max_cost: f64 = ((big_prime_limit as f64).ln()/((max_cycles - odd) as f64)).min((primorial as f64).ln()/((max_cycles - odd) as f64 + 1.0));
-
+    let max_cost: f64 = cost(big_prime_limit,max_cycles - odd).min(cost(primorial,max_cycles - odd+1));
+    while (factors.last().unwrap().0 as f64).ln()/(factors.last().unwrap().1 as f64) > max_cost{
+        factors.pop();
+    }
 
     // then take exp so we can compare against prime rather than ln(prime)
     let max_per_cycle: f64 = max_cost.exp();
     let mut current_max: f64 = max_per_cycle;
 
-    // fill the results with the rows ( prime, 1, ln(prime)/1, ln(prime) )
+    // fill the results with the rows ( prime, 1 )
     let mut fermat_exclude: Vec<u128> = vec![];
     if only_odd { fermat_exclude = vec![3,5,17,257,65537];} // if only_odd, we exclude rows with fermat primes
 
     for p in 1..prime_values.len() {
         if prime_values[p] as f64 > max_per_cycle{break;}
         if fermat_exclude.contains(&prime_values[p]) {continue;}
-        let ln_check: f64 = (prime_values[p] as f64).ln();
-        factors.push((prime_values[p],1,ln_check,ln_check));
+        factors.push((prime_values[p],1));
     }
 
     // this will be explained where it is used
@@ -232,7 +218,7 @@ fn generate_factor_list(primes: &Vec<bool>,only_odd: bool,file_path: &str){
     /*
         in the following section we loop cycles from 2 to max_cycles
         and check all values that would give that number of cycles.
-        if prime, add to the results list ( prime, c, ln(prime)/c, ln(prime) )
+        if prime, add to the results list ( prime, c )
 
         for example, when cycles = 3 we check all n such that
         n - 1 is divisible by exactly 3 primes
@@ -386,8 +372,7 @@ fn generate_factor_list(primes: &Vec<bool>,only_odd: bool,file_path: &str){
 
                     // if we found a prime, add it to the results list
                     if check_is_prime{
-                        let ln_check: f64 = (check_value as f64).ln();
-                        factors.push((check_value,cycles-odd,ln_check/((cycles-odd) as f64),ln_check));
+                        factors.push((check_value,cycles-odd));
                     }
 
                 }
@@ -454,12 +439,8 @@ fn generate_factor_list(primes: &Vec<bool>,only_odd: bool,file_path: &str){
         }
 
     }
-
-    // sort factors and remove anything with a cost that is too high
-    factors.sort_by( |a: &(u128, usize, f64, f64), b: &(u128, usize, f64, f64)| a.2.partial_cmp(&b.2).unwrap());
-    while factors.last().unwrap().2 > max_cost{
-        factors.pop();
-    }
+    
+    factors.sort_by( |a: &(u128, usize), b: &(u128, usize)| cost(a.0,a.1 ).partial_cmp(&cost(b.0,b.1 )).unwrap());
 
     // csv code below thanks to https://gistlib.com/rust/create-a-csv-file-in-rust
     // Create our file object
@@ -473,9 +454,14 @@ fn generate_factor_list(primes: &Vec<bool>,only_odd: bool,file_path: &str){
 
     // Write our data to the CSV file
     for factor in factors{
-        csv_writer.write_record(&[factor.0.to_string(),factor.1.to_string(),factor.2.to_string(),factor.3.to_string()]).expect("Unable to write record");
+        csv_writer.write_record(&[factor.0.to_string(),factor.1.to_string()]).expect("Unable to write record");
     }
+    // println!("max_missing_cost: {}",-max_cost);
 
+}
+
+fn cost(raw_value: u128, weight: usize) -> f64{
+    (raw_value as f64).ln()/(weight as f64)
 }
 
 
@@ -483,18 +469,17 @@ fn main(){
     
     //let now = time::Instant::now();
     let mut primes: Vec<bool> = vec![false,true,false,false,false,true]; // boolean vector of primes, index n = (n is prime)
-
-    
-    let limit: usize = 2000000; // the length that we will extend 'primes' to
+    let limit: usize = 200000; // the length that we will extend 'primes' to
     primes_below_limit(&mut primes,limit);
     generate_factor_list(&primes,false,"A379423_factors.csv");
     
 
-    /*
-    let limit: usize = 500000; // Lower for A379424 since it takes much longer
+    
+    let mut primes: Vec<bool> = vec![false,true,false,false,false,true]; // boolean vector of primes, index n = (n is prime)
+    let limit: usize = 50000; // Lower for A379424 since it takes much longer
     primes_below_limit(&mut primes,limit);
     generate_factor_list(&primes,true,"A379424_factors.csv");
-    */
+    
 
     //println!("{}",now.elapsed().as_millis());
 }
