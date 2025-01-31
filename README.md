@@ -7,6 +7,6 @@ The file least_modulus_with_n_cycles.py is a fairly straightforward program that
 
 I optimized this in two sections:  
 main.rs is used to generate a list of primes ordered by ln(p) / (# of cycles in (Z/pZ)*)  
-least_modulus_knapsack uses this list to compute the terms of the sequence. It makes use of a modified version of the 0/1 knapsack that I wrote to account for lists of items that are incomplete. This applies here since a knapsack approach is efficient but there are infinite primes so we can only test a subset, the *best* primes.
+least_modulus_knapsack.py uses this list to compute the terms of the sequence. It makes use of a modified version of the 0/1 knapsack that I wrote to account for lists of items that are incomplete. This applies here since a knapsack approach is efficient but there are infinite primes so we can only test a subset, the *best* primes.
 
 This optimization is able to find a million terms of A379423 in only a few hours - far better than the naive first solution.
